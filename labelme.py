@@ -19,6 +19,7 @@
 # along with Labelme.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+import os
 import os.path
 import re
 import sys
@@ -31,6 +32,7 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
 import resources
+import utilities
 
 from lib import struct, newAction, newIcon, addActions, fmtShortcut
 from shape import Shape, DEFAULT_LINE_COLOR, DEFAULT_FILL_COLOR
@@ -83,9 +85,13 @@ class WindowMixin(object):
 class MainWindow(QMainWindow, WindowMixin):
     FIT_WINDOW, FIT_WIDTH, MANUAL_ZOOM = range(3)
 
-    def __init__(self, filename=None):
+    def __init__(self, dirname=None, filename=None):
         super(MainWindow, self).__init__()
         self.setWindowTitle(__appname__)
+        
+        # adding list of files to be processed
+        if dirname:
+            self.filelist=utilities.returnFiles(dirname,"jpg")
 
         # Whether we need to save or not.
         self.dirty = False
@@ -936,7 +942,8 @@ def main(argv):
     app = QApplication(argv)
     app.setApplicationName(__appname__)
     app.setWindowIcon(newIcon("app"))
-    win = MainWindow(argv[1] if len(argv) == 2 else None)
+    print argv[0]
+    win = MainWindow(argv[1],argv[2] if len(argv) == 3 else None)
     win.show()
     return app.exec_()
 
