@@ -77,6 +77,14 @@ def parseShapesAsList(shapes):
             if fill_color:
                 shape.fill_color = QColor(*fill_color)
     return s
+    
+def format_shape(s,lineColor,fillColor):
+    return dict(label=unicode(s.label),
+                line_color=s.line_color.getRgb()\
+                        if s.line_color != lineColor else None,
+                fill_color=s.fill_color.getRgb()\
+                        if s.fill_color != fillColor else None,
+                points=[(p.x(), p.y()) for p in s.points])
         
 
 class WindowMixin(object):
@@ -106,6 +114,7 @@ class MainWindow(QMainWindow, WindowMixin):
         
         # adding list of files to be processed
         if dirname:
+            self.anno=[]
             self.image_suffix="png"
             self.filelist=utilities.returnFiles(dirname,self.image_suffix)
             
@@ -569,15 +578,7 @@ class MainWindow(QMainWindow, WindowMixin):
 
     def saveLabels(self, filename):
         lf = LabelFile()
-        def format_shape(s):
-            return dict(label=unicode(s.label),
-                        line_color=s.line_color.getRgb()\
-                                if s.line_color != self.lineColor else None,
-                        fill_color=s.fill_color.getRgb()\
-                                if s.fill_color != self.fillColor else None,
-                        points=[(p.x(), p.y()) for p in s.points])
-
-        shapes = [format_shape(shape) for shape in self.canvas.shapes]
+        shapes = [format_shape(shape,self.lineColor,self.fillColor) for shape in self.canvas.shapes]
         try:
             lf.save(filename, shapes, unicode(self.filename), self.imageData,
                 self.lineColor.getRgb(), self.fillColor.getRgb())
@@ -615,7 +616,6 @@ class MainWindow(QMainWindow, WindowMixin):
 
         position MUST be in global coordinates.
         """
-        print "into newShape()"
         #text = self.labelDialog.popUp()
         text="label_"+str(len(self.labelList))
         if text is not None:
@@ -628,7 +628,6 @@ class MainWindow(QMainWindow, WindowMixin):
             self.setDirty()
         else:
             self.canvas.undoLastLine()
-        print "out of newShape()"        
 
     def scrollRequest(self, delta, orientation):
         units = - delta / (8 * 15)
@@ -688,6 +687,7 @@ class MainWindow(QMainWindow, WindowMixin):
                 self.imageData = self.labelFile.imageData
                 self.lineColor = QColor(*self.labelFile.lineColor)
                 self.fillColor = QColor(*self.labelFile.fillColor)
+                self.anno = self.labelFile.anno
             else:
                 # Load image:
                 # read data first and store for saving into label file.
@@ -809,24 +809,13 @@ class MainWindow(QMainWindow, WindowMixin):
     def createLabelFile(self,rImgName,tImgName):
         rLabelName=rImgName[:-3]+"lif"
         tLabelName=tImgName[:-3]+"lif"
+        
+        rshapes=[]
         if(QFile.exists(rLabelName)):
             try:
                 rf=LabelFile(rLabelName)
                 slist = list(parseShapesAsList(rf.shapes))
-                def format_shape(s):
-                    return dict(label=unicode(s.label),
-                                line_color=s.line_color.getRgb()\
-                                        if s.line_color != self.lineColor else None,
-                                fill_color=s.fill_color.getRgb()\
-                                        if s.fill_color != self.fillColor else None,
-                                points=[(p.x(), p.y()) for p in s.points])
-        
-                shapes = [format_shape(shape_) for shape_ in slist]
-                        
-                tf=LabelFile()
-                tImgData=read(tImgName,None)
-                tf.save(tLabelName,shapes,unicode(tImgName),tImgData,
-                        self.lineColor.getRgb(),self.fillColor.getRgb())
+                rshapes = [format_shape(shape_,self.lineColor,self.fillColor) for shape_ in slist]                        
             except LabelFileError, e:
                 self.errorMessage(u'Error opening file',
                         (u"<p><b>%s</b></p>"
@@ -834,6 +823,44 @@ class MainWindow(QMainWindow, WindowMixin):
                         % (e, rLabelName))
                 self.status("Error reading %s" % rLabelName)
                 return False
+        
+        if(QFile.exists(tLabelName)):
+            try:
+                tf=LabelFile(tLabelName)
+                slist=list(parseShapesAsList(tf.shapes))
+                tshapes=[format_shape(shape_,self.lineColor,self.fillColor) for shape_ in slist]
+                # save only those labels that are not there in the target image
+                for r in rshapes:
+                    found=False
+                    for t in tshapes:
+                        if r['label']==t['label']:
+                            found=True
+                            break
+                    if(found==False):
+                        tshapes.append(r)
+                tf.save(tLabelName,tshapes,unicode(tImgName),tf.imageData,
+                        self.lineColor.getRgb(),self.fillColor.getRgb())  
+            except LabelFileError, e:
+                self.errorMessage(u'Error opening file',
+                        (u"<p><b>%s</b></p>"
+                         u"<p>Make sure <i>%s</i> is a valid label file.")\
+                        % (e, tLabelName))
+                self.status("Error reading %s" % tLabelName)
+                return False
+        else:
+            try:
+                tf=LabelFile()
+                tImgData=read(tImgName,None)
+                tf.save(tLabelName,rshapes,unicode(tImgName),tImgData,
+                        self.lineColor.getRgb(),self.fillColor.getRgb())  
+            except LabelFileError, e:
+                self.errorMessage(u'Error opening file',
+                        (u"<p><b>%s</b></p>"
+                         u"<p>Make sure <i>%s</i> is a valid label file.")\
+                        % (e, tLabelName))
+                self.status("Error reading %s" % tLabelName)
+                return False
+            
 
     def saveFile(self, _value=False):
         assert not self.image.isNull(), "cannot save empty image"
