@@ -64,6 +64,21 @@ __appname__ = 'labelme'
 
 ### Utility functions and classes.
 
+def parseShapesAsList(shapes):
+    s=[]    
+    for label, points, line_color, fill_color in shapes:
+            shape = Shape(label=label)
+            for x, y in points:
+                shape.addPoint(QPointF(x, y))
+            shape.close()
+            s.append(shape)
+            if line_color:
+                shape.line_color = QColor(*line_color)
+            if fill_color:
+                shape.fill_color = QColor(*fill_color)
+    return s
+        
+
 class WindowMixin(object):
     def menu(self, title, actions=None):
         menu = self.menuBar().addMenu(title)
@@ -91,8 +106,9 @@ class MainWindow(QMainWindow, WindowMixin):
         
         # adding list of files to be processed
         if dirname:
-            self.filelist=utilities.returnFiles(dirname,"jpg")
-
+            self.image_suffix="png"
+            self.filelist=utilities.returnFiles(dirname,self.image_suffix)
+            
         # Whether we need to save or not.
         self.dirty = False
 
@@ -199,6 +215,12 @@ class MainWindow(QMainWindow, WindowMixin):
 
         help = action('&Tutorial', self.tutorial, 'Ctrl+T', 'help',
                 u'Show screencast of introductory tutorial')
+                
+        next_ = action('Next\nImag&e', self.Next_,
+                'Ctrl+Shift+N', 'next', u'load next')
+                
+        prev_ = action('Prev\nImag&e', self.Prev_,
+                'Ctrl+Shift+P', 'prev', u'load next')
 
         zoom = QWidgetAction(self)
         zoom.setDefaultWidget(self.zoomWidget)
@@ -260,8 +282,8 @@ class MainWindow(QMainWindow, WindowMixin):
                 shapeLineColor=shapeLineColor, shapeFillColor=shapeFillColor,
                 zoom=zoom, zoomIn=zoomIn, zoomOut=zoomOut, zoomOrg=zoomOrg,
                 fitWindow=fitWindow, fitWidth=fitWidth,
-                zoomActions=zoomActions,
-                fileMenuActions=(open,save,saveAs,close,quit),
+                zoomActions=zoomActions,next_=next_,prev_=prev_,
+                fileMenuActions=(open,save,saveAs,close,quit,next_,prev_),
                 beginner=(), advanced=(),
                 editMenu=(edit, copy, delete, None, color1, color2),
                 beginnerContext=(create, edit, copy, delete),
@@ -279,7 +301,7 @@ class MainWindow(QMainWindow, WindowMixin):
                 labelList=labelMenu)
 
         addActions(self.menus.file,
-                (open, self.menus.recentFiles, save, saveAs, close, None, quit))
+                (open, self.menus.recentFiles, save, saveAs, close, None, quit,next_))
         addActions(self.menus.help, (help,))
         addActions(self.menus.view, (
             labels, advancedMode, None,
@@ -298,7 +320,7 @@ class MainWindow(QMainWindow, WindowMixin):
         self.tools = self.toolbar('Tools')
         self.actions.beginner = (
             open, save, None, create, copy, delete, None,
-            zoomIn, zoom, zoomOut, fitWindow, fitWidth)
+            zoomIn, zoom, zoomOut, fitWindow, fitWidth, None, next_, prev_)
 
         self.actions.advanced = (
             open, save, None,
@@ -455,11 +477,9 @@ class MainWindow(QMainWindow, WindowMixin):
         subprocess.Popen([self.screencastViewer, self.screencast])
 
     def createShape(self):
-        print "into createShape()"
         assert self.beginner()
         self.canvas.setEditing(False)
         self.actions.create.setEnabled(False)
-        print "out of createShape()"
 
     def toggleDrawingSensitive(self, drawing=True):
         """In the middle of drawing, toggling between modes should be disabled."""
@@ -501,7 +521,6 @@ class MainWindow(QMainWindow, WindowMixin):
         self.menus.labelList.exec_(self.labelList.mapToGlobal(point))
 
     def editLabel(self, item=None):
-        print "into editLabel"
         if not self.canvas.editing():
             return
         item = item if item else self.currentItem()
@@ -509,11 +528,9 @@ class MainWindow(QMainWindow, WindowMixin):
         if text is not None:
             item.setText(text)
             self.setDirty()
-        print "out of editLabel"
 
     # React to canvas signals.
     def shapeSelectionChanged(self, selected=False):
-        print "into shapeSelectionChanged"
         if self._noSelectionSlot:
             self._noSelectionSlot = False
         else:
@@ -527,7 +544,6 @@ class MainWindow(QMainWindow, WindowMixin):
         self.actions.edit.setEnabled(selected)
         self.actions.shapeLineColor.setEnabled(selected)
         self.actions.shapeFillColor.setEnabled(selected)
-        print "out of shapeSelectionChanged"
 
     def addLabel(self, shape):
         item = QListWidgetItem(shape.label)
@@ -546,21 +562,10 @@ class MainWindow(QMainWindow, WindowMixin):
         del self.itemsToShapes[item]
 
     def loadLabels(self, shapes):
-        print "into loadLabels()"
-        s = []
-        for label, points, line_color, fill_color in shapes:
-            shape = Shape(label=label)
-            for x, y in points:
-                shape.addPoint(QPointF(x, y))
-            shape.close()
-            s.append(shape)
+        s = parseShapesAsList(shapes)
+        for shape in s:
             self.addLabel(shape)
-            if line_color:
-                shape.line_color = QColor(*line_color)
-            if fill_color:
-                shape.fill_color = QColor(*fill_color)
         self.canvas.loadShapes(s)
-        print "out of loadLabels()"
 
     def saveLabels(self, filename):
         lf = LabelFile()
@@ -667,8 +672,8 @@ class MainWindow(QMainWindow, WindowMixin):
         if filename is None:
             filename = self.settings['filename']
         filename = unicode(filename)
-        if(QFile.exists(filename[:-3]+"lif")):
-            filename=filename[:-3]+"lif";
+        if(QFile.exists(filename[:-3]+"lif")):  #check if lif file exists
+            filename=filename[:-3]+"lif";       # then load it
         if QFile.exists(filename):
             if LabelFile.isLabelFile(filename):
                 try:
@@ -764,7 +769,6 @@ class MainWindow(QMainWindow, WindowMixin):
             self.loadFile(filename)
 
     def openFile(self, _value=False):
-        print "into openFile()"
         if not self.mayContinue():
             return
         path = os.path.dirname(unicode(self.filename))\
@@ -777,7 +781,59 @@ class MainWindow(QMainWindow, WindowMixin):
             '%s - Choose Image or Label file' % __appname__, path, filters))
         if filename:
             self.loadFile(filename)
-        print "out of openFile()"
+        
+    def Next_(self):
+        found = [i for i,s in enumerate(self.filelist) if self.filename[:-3] in s]
+        if found and found[0]<len(self.filelist)-1:
+            self.createLabelFile(self.filename,self.filelist[found[0]+1])
+            self.filename=self.filelist[found[0]+1]
+            self.loadFile(self.filename)         
+        else:
+            if not found:
+                print "filelist does not contain this file."
+            else:
+                print "This is the last image. There is no next image."                
+        
+    def Prev_(self):
+        found = [i for i,s in enumerate(self.filelist) if self.filename[:-3] in s]
+        if found and found[0]>0:
+            self.createLabelFile(self.filename,self.filelist[found[0]-1])
+            self.filename=self.filelist[found[0]-1]
+            self.loadFile(self.filename)         
+        else:
+            if not found:
+                print "filelist does not contain this file."
+            else:
+                print "This is the first image. There is no prev image."
+                
+    def createLabelFile(self,rImgName,tImgName):
+        rLabelName=rImgName[:-3]+"lif"
+        tLabelName=tImgName[:-3]+"lif"
+        if(QFile.exists(rLabelName)):
+            try:
+                rf=LabelFile(rLabelName)
+                slist = list(parseShapesAsList(rf.shapes))
+                def format_shape(s):
+                    return dict(label=unicode(s.label),
+                                line_color=s.line_color.getRgb()\
+                                        if s.line_color != self.lineColor else None,
+                                fill_color=s.fill_color.getRgb()\
+                                        if s.fill_color != self.fillColor else None,
+                                points=[(p.x(), p.y()) for p in s.points])
+        
+                shapes = [format_shape(shape_) for shape_ in slist]
+                        
+                tf=LabelFile()
+                tImgData=read(tImgName,None)
+                tf.save(tLabelName,shapes,unicode(tImgName),tImgData,
+                        self.lineColor.getRgb(),self.fillColor.getRgb())
+            except LabelFileError, e:
+                self.errorMessage(u'Error opening file',
+                        (u"<p><b>%s</b></p>"
+                         u"<p>Make sure <i>%s</i> is a valid label file.")\
+                        % (e, rLabelName))
+                self.status("Error reading %s" % rLabelName)
+                return False
 
     def saveFile(self, _value=False):
         assert not self.image.isNull(), "cannot save empty image"

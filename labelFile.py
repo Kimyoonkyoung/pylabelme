@@ -22,6 +22,12 @@ import os.path
 
 from base64 import b64encode, b64decode
 
+class annotation:
+    def __init__(self,obj_name,aff_name,bb_string):
+        self.obj_name=obj_name
+        self.aff_name=aff_name
+        self.bb=map(int,bb_string.split(" "))
+
 class LabelFileError(Exception):
     pass
 
@@ -51,6 +57,13 @@ class LabelFile(object):
                 self.imageData = imageData
                 self.lineColor = lineColor
                 self.fillColor = fillColor
+                # load annotation data
+                fid=open(filename[:-3]+"txt",'rb')
+                tanno=[row.strip().split('\t') for row in fid]
+                self.anno=[]
+                for lanno in tanno:
+                    self.anno.append(annotation(lanno[0],lanno[1],lanno[2]))
+                
         except Exception, e:
             raise LabelFileError(e)
 
