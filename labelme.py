@@ -115,7 +115,7 @@ class MainWindow(QMainWindow, WindowMixin):
         # adding list of files to be processed
         if dirname:
             self.anno=[]
-            self.image_suffix="png"
+            self.image_suffix="jpg"
             self.filelist=utilities.returnFiles(dirname,self.image_suffix)
             
         # Whether we need to save or not.
@@ -310,7 +310,7 @@ class MainWindow(QMainWindow, WindowMixin):
                 labelList=labelMenu)
 
         addActions(self.menus.file,
-                (open, self.menus.recentFiles, save, saveAs, close, None, quit,next_))
+                (open, self.menus.recentFiles, save, saveAs, close, None, quit,next_,prev_))
         addActions(self.menus.help, (help,))
         addActions(self.menus.view, (
             labels, advancedMode, None,
@@ -792,7 +792,7 @@ class MainWindow(QMainWindow, WindowMixin):
             if not found:
                 print "filelist does not contain this file."
             else:
-                print "This is the last image. There is no next image."                
+                print "This is the last image. There is no next image."
         
     def Prev_(self):
         found = [i for i,s in enumerate(self.filelist) if self.filename[:-3] in s]
@@ -824,42 +824,42 @@ class MainWindow(QMainWindow, WindowMixin):
                 self.status("Error reading %s" % rLabelName)
                 return False
         
-        if(QFile.exists(tLabelName)):
-            try:
-                tf=LabelFile(tLabelName)
-                slist=list(parseShapesAsList(tf.shapes))
-                tshapes=[format_shape(shape_,self.lineColor,self.fillColor) for shape_ in slist]
-                # save only those labels that are not there in the target image
-                for r in rshapes:
-                    found=False
-                    for t in tshapes:
-                        if r['label']==t['label']:
-                            found=True
-                            break
-                    if(found==False):
-                        tshapes.append(r)
-                tf.save(tLabelName,tshapes,unicode(tImgName),tf.imageData,
-                        self.lineColor.getRgb(),self.fillColor.getRgb())  
-            except LabelFileError, e:
-                self.errorMessage(u'Error opening file',
-                        (u"<p><b>%s</b></p>"
-                         u"<p>Make sure <i>%s</i> is a valid label file.")\
-                        % (e, tLabelName))
-                self.status("Error reading %s" % tLabelName)
-                return False
-        else:
-            try:
-                tf=LabelFile()
-                tImgData=read(tImgName,None)
-                tf.save(tLabelName,rshapes,unicode(tImgName),tImgData,
-                        self.lineColor.getRgb(),self.fillColor.getRgb())  
-            except LabelFileError, e:
-                self.errorMessage(u'Error opening file',
-                        (u"<p><b>%s</b></p>"
-                         u"<p>Make sure <i>%s</i> is a valid label file.")\
-                        % (e, tLabelName))
-                self.status("Error reading %s" % tLabelName)
-                return False
+            if(QFile.exists(tLabelName)):
+                try:
+                    tf=LabelFile(tLabelName)
+                    slist=list(parseShapesAsList(tf.shapes))
+                    tshapes=[format_shape(shape_,self.lineColor,self.fillColor) for shape_ in slist]
+                    # save only those labels that are not there in the target image
+                    for r in rshapes:
+                        found=False
+                        for t in tshapes:
+                            if r['label']==t['label']:
+                                found=True
+                                break
+                        if(found==False):
+                            tshapes.append(r)
+                    tf.save(tLabelName,tshapes,unicode(tImgName),tf.imageData,
+                            self.lineColor.getRgb(),self.fillColor.getRgb())  
+                except LabelFileError, e:
+                    self.errorMessage(u'Error opening file',
+                            (u"<p><b>%s</b></p>"
+                             u"<p>Make sure <i>%s</i> is a valid label file.")\
+                            % (e, tLabelName))
+                    self.status("Error reading %s" % tLabelName)
+                    return False
+            else:
+                try:
+                    tf=LabelFile()
+                    tImgData=read(tImgName,None)
+                    tf.save(tLabelName,rshapes,unicode(tImgName),tImgData,
+                            self.lineColor.getRgb(),self.fillColor.getRgb())  
+                except LabelFileError, e:
+                    self.errorMessage(u'Error opening file',
+                            (u"<p><b>%s</b></p>"
+                             u"<p>Make sure <i>%s</i> is a valid label file.")\
+                            % (e, tLabelName))
+                    self.status("Error reading %s" % tLabelName)
+                    return False
             
 
     def saveFile(self, _value=False):
