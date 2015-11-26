@@ -108,12 +108,13 @@ class WindowMixin(object):
 class MainWindow(QMainWindow, WindowMixin):
     FIT_WINDOW, FIT_WIDTH, MANUAL_ZOOM = range(3)
 
-    def __init__(self, dirname=None, filename=None):
+    def __init__(self, dirname=None, afflabel=None, filename=None):
         super(MainWindow, self).__init__()
         self.setWindowTitle(__appname__)
         
         # adding list of files to be processed
         if dirname:
+            self.afflabel=afflabel
             self.image_suffix="png"
             self.filelist=utilities.returnFiles(dirname,self.image_suffix)
             print "number of files to process: "+str(len(self.filelist))
@@ -618,7 +619,7 @@ class MainWindow(QMainWindow, WindowMixin):
         position MUST be in global coordinates.
         """
         #text = self.labelDialog.popUp()
-        text="label_"+str(len(self.labelList))
+        text=self.afflabel+"_"+str(len(self.labelList))
         if text is not None:
             self.addLabel(self.canvas.setLastLabel(text))
             if self.beginner(): # Switch to edit mode.
@@ -1021,17 +1022,19 @@ def read(filename, default=None):
             return f.read()
     except:
         return default
-
-
+    
 def main(argv):
     """Standard boilerplate Qt application code."""
     app = QApplication(argv)
     app.setApplicationName(__appname__)
     app.setWindowIcon(newIcon("app"))
-    print argv[0]
-    win = MainWindow(argv[1],argv[2] if len(argv) == 3 else None)
-    win.show()
-    return app.exec_()
+    if len(argv) == 3:
+        win = MainWindow(argv[1],argv[2])
+        win.show()
+        return app.exec_()
+    else:
+        print "not enough arguments. command: ./labelme.py /data/dir/loc affordanceName"
+        return
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
