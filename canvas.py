@@ -49,6 +49,7 @@ class Canvas(QWidget):
     def __init__(self, *args, **kwargs):
         super(Canvas, self).__init__(*args, **kwargs)
         # Initialise local state.
+        self.anno = []
         self.mode = self.EDIT
         self.shapes = []
         self.current = None
@@ -379,6 +380,10 @@ class Canvas(QWidget):
         for shape in self.shapes:
             if (shape.selected or not self._hideBackround) and self.isVisible(shape):
                 shape.fill = shape.selected or shape == self.hShape
+                shape.paint(p)
+        for a in self.anno:
+            for shape in a.shape:
+                shape.line_color=QColor(255, 0, 255, 128)
                 shape.paint(p)
         if self.current:
             self.current.paint(p)

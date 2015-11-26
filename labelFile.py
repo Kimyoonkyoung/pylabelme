@@ -26,9 +26,15 @@ class annotation:
     def __init__(self,obj_name,aff_name,bb_string):
         self.obj_name=obj_name
         self.aff_name=aff_name
-        self.bb=map(int,bb_string.split(" "))
+        bb=map(int,bb_string.split(" "))
+        self.shape=[]
+        self.shape.append(('bb',[[bb[0],bb[1]],[bb[0],bb[1]+bb[3]],\
+        [bb[0]+bb[2],bb[1]+bb[3]],[bb[0]+bb[2],bb[1]]],None,None))
 
 class LabelFileError(Exception):
+    pass
+
+class AnnoFileError(Exception):
     pass
 
 class LabelFile(object):
@@ -42,6 +48,16 @@ class LabelFile(object):
             self.load(filename)
 
     def load(self, filename):
+        try:
+            # load annotation data
+                fid=open(filename[:-3]+"txt",'rb')
+                tanno=[row.strip().split('\t') for row in fid]
+                self.anno=[]
+                for lanno in tanno:
+                    self.anno.append(annotation(lanno[0],lanno[1],lanno[2]))
+        except Exception, e:
+            raise AnnoFileError(e)
+            
         try:
             with open(filename, 'rb') as f:
                 data = json.load(f)
@@ -57,13 +73,6 @@ class LabelFile(object):
                 self.imageData = imageData
                 self.lineColor = lineColor
                 self.fillColor = fillColor
-                # load annotation data
-                fid=open(filename[:-3]+"txt",'rb')
-                tanno=[row.strip().split('\t') for row in fid]
-                self.anno=[]
-                for lanno in tanno:
-                    self.anno.append(annotation(lanno[0],lanno[1],lanno[2]))
-                
         except Exception, e:
             raise LabelFileError(e)
 

@@ -71,11 +71,11 @@ def parseShapesAsList(shapes):
             for x, y in points:
                 shape.addPoint(QPointF(x, y))
             shape.close()
-            s.append(shape)
             if line_color:
                 shape.line_color = QColor(*line_color)
             if fill_color:
                 shape.fill_color = QColor(*fill_color)
+            s.append(shape)
     return s
     
 def format_shape(s,lineColor,fillColor):
@@ -114,9 +114,9 @@ class MainWindow(QMainWindow, WindowMixin):
         
         # adding list of files to be processed
         if dirname:
-            self.anno=[]
-            self.image_suffix="jpg"
+            self.image_suffix="png"
             self.filelist=utilities.returnFiles(dirname,self.image_suffix)
+            print "number of files to process: "+str(len(self.filelist))
             
         # Whether we need to save or not.
         self.dirty = False
@@ -159,6 +159,7 @@ class MainWindow(QMainWindow, WindowMixin):
 
         self.canvas = Canvas()
         self.canvas.zoomRequest.connect(self.zoomRequest)
+        self.canvas.anno=[]
 
         scroll = QScrollArea()
         scroll.setWidget(self.canvas)
@@ -687,7 +688,9 @@ class MainWindow(QMainWindow, WindowMixin):
                 self.imageData = self.labelFile.imageData
                 self.lineColor = QColor(*self.labelFile.lineColor)
                 self.fillColor = QColor(*self.labelFile.fillColor)
-                self.anno = self.labelFile.anno
+                self.canvas.anno = self.labelFile.anno
+                for idx in range(len(self.canvas.anno)):
+                    self.canvas.anno[idx].shape=list(parseShapesAsList(self.canvas.anno[idx].shape))
             else:
                 # Load image:
                 # read data first and store for saving into label file.
@@ -815,7 +818,7 @@ class MainWindow(QMainWindow, WindowMixin):
             try:
                 rf=LabelFile(rLabelName)
                 slist = list(parseShapesAsList(rf.shapes))
-                rshapes = [format_shape(shape_,self.lineColor,self.fillColor) for shape_ in slist]                        
+                rshapes = [format_shape(shape_,self.lineColor,self.fillColor) for shape_ in slist]                  
             except LabelFileError, e:
                 self.errorMessage(u'Error opening file',
                         (u"<p><b>%s</b></p>"
