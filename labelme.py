@@ -621,7 +621,7 @@ class MainWindow(QMainWindow, WindowMixin):
         position MUST be in global coordinates.
         """
         #text = self.labelDialog.popUp()
-        text=self.afflabel+"_"+str(len(self.labelList))
+        text=self.objLabel+"_"+self.afflabel+"_"+str(len(self.labelList))
         if text is not None:
             self.addLabel(self.canvas.setLastLabel(text))
             if self.beginner(): # Switch to edit mode.
@@ -876,7 +876,7 @@ class MainWindow(QMainWindow, WindowMixin):
                     for r in rshapes:
                         found=False
                         for t in tshapes:
-                            if r['label']==t['label']:
+                            if r['label']==t['label'] or not (self.objLabel in r['label']):
                                 found=True
                                 break
                         if(found==False):
