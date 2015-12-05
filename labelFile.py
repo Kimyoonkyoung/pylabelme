@@ -40,23 +40,27 @@ class AnnoFileError(Exception):
 class LabelFile(object):
     suffix = '.lif'
 
-    def __init__(self, filename=None):
+    def __init__(self, filename=None, read_mode=0):
         self.shapes = ()
         self.imagePath = None
         self.imageData = None
         if filename is not None:
+            self.load_anno(filename)
+        if filename is not None and read_mode is 0:
             self.load(filename)
-
-    def load(self, filename):
+            
+    def load_anno(self,filename):
         try:
             # load annotation data
-                fid=open(filename[:-3]+"txt",'rb')
-                tanno=[row.strip().split('\t') for row in fid]
-                self.anno=[]
-                for lanno in tanno:
-                    self.anno.append(annotation(lanno[0],lanno[1],lanno[2]))
+            fid=open(filename[:-3]+"txt",'rb')
+            tanno=[row.strip().split('\t') for row in fid]
+            self.anno=[]
+            for lanno in tanno:
+                self.anno.append(annotation(lanno[0],lanno[1],lanno[2]))
         except Exception, e:
             raise AnnoFileError(e)
+
+    def load(self, filename):
             
         try:
             with open(filename, 'rb') as f:

@@ -33,6 +33,7 @@ from PyQt4.QtCore import *
 
 import resources
 import utilities
+import re
 
 from lib import struct, newAction, newIcon, addActions, fmtShortcut
 from shape import Shape, DEFAULT_LINE_COLOR, DEFAULT_FILL_COLOR
@@ -108,13 +109,14 @@ class WindowMixin(object):
 class MainWindow(QMainWindow, WindowMixin):
     FIT_WINDOW, FIT_WIDTH, MANUAL_ZOOM = range(3)
 
-    def __init__(self, dirname=None, afflabel=None, filename=None):
+    def __init__(self, dirname=None, afflabel=None, objLabel=None, filename=None):
         super(MainWindow, self).__init__()
         self.setWindowTitle(__appname__)
         
         # adding list of files to be processed
         if dirname:
             self.afflabel=afflabel
+            self.objLabel=objLabel
             self.image_suffix="png"
             self.filelist=utilities.returnFiles(dirname,self.image_suffix)
             print "number of files to process: "+str(len(self.filelist))
@@ -787,32 +789,69 @@ class MainWindow(QMainWindow, WindowMixin):
             self.loadFile(filename)
         
     def Next_(self):
-        found = [i for i,s in enumerate(self.filelist) if self.filename[:-3] in s]
-        if found and found[0]<len(self.filelist)-1:
-            self.createLabelFile(self.filename,self.filelist[found[0]+1])
+        repeat=True
+        obj_exists=False
+        prev_filename=''
+        while(repeat):        
+            found = [i for i,s in enumerate(self.filelist) if self.filename[:-3] in s]
+            if found and found[0]<len(self.filelist)-1:
+                lf=LabelFile(self.filelist[found[0]+1],1)
+                for anno in lf.anno:
+                    if(anno.obj_name == self.objLabel):
+                        repeat=False
+                        obj_exists=True
+                        break
+                prev_filename=self.filename
+                self.filename=self.filelist[found[0]+1]                
+            else:
+                repeat=False
+                if not found:
+                    print "filelist does not contain this file."
+                else:
+                    print "This is the last image. There is no next image."
+        
+        if obj_exists:
+            self.createLabelFile(prev_filename,self.filename)
             self.filename=self.filelist[found[0]+1]
             self.loadFile(self.filename)         
-        else:
-            if not found:
-                print "filelist does not contain this file."
-            else:
-                print "This is the last image. There is no next image."
         
     def Prev_(self):
-        found = [i for i,s in enumerate(self.filelist) if self.filename[:-3] in s]
-        if found and found[0]>0:
-            self.createLabelFile(self.filename,self.filelist[found[0]-1])
+        repeat=True
+        obj_exists=False
+        prev_filename=''
+        while(repeat):        
+            found = [i for i,s in enumerate(self.filelist) if self.filename[:-3] in s]
+            if found and found[0]>0:
+                lf=LabelFile(self.filelist[found[0]-1],1)
+                for anno in lf.anno:
+                    if(anno.obj_name == self.objLabel):
+                        repeat=False
+                        obj_exists=True
+                        break
+                prev_filename=self.filename
+                self.filename=self.filelist[found[0]-1]
+            else:
+                repeat=False
+                if not found:
+                    print "filelist does not contain this file."
+                else:
+                    print "This is the last image. There is no next image."
+                    
+        if obj_exists:
+            self.createLabelFile(prev_filename,self.filename)
             self.filename=self.filelist[found[0]-1]
             self.loadFile(self.filename)         
-        else:
-            if not found:
-                print "filelist does not contain this file."
-            else:
-                print "This is the first image. There is no prev image."
                 
     def createLabelFile(self,rImgName,tImgName):
         rLabelName=rImgName[:-3]+"lif"
         tLabelName=tImgName[:-3]+"lif"
+        rsplit=re.split('\-|RGB\_|\.|frame',rLabelName)
+        tsplit=re.split('\-|RGB\_|\.|frame',tLabelName)
+        rsplit=float(rsplit[-2])
+        tsplit=float(tsplit[-2])
+        if(abs(rsplit-tsplit)>5):
+            print "possibly discontinuous sequence. Not creating label file"
+            return
         
         rshapes=[]
         if(QFile.exists(rLabelName)):
@@ -1028,12 +1067,12 @@ def main(argv):
     app = QApplication(argv)
     app.setApplicationName(__appname__)
     app.setWindowIcon(newIcon("app"))
-    if len(argv) == 3:
-        win = MainWindow(argv[1],argv[2])
+    if len(argv) == 4:
+        win = MainWindow(argv[1],argv[2],argv[3])
         win.show()
         return app.exec_()
     else:
-        print "not enough arguments. command: ./labelme.py /data/dir/loc affordanceName"
+        print "not enough arguments. command: ./labelme.py /data/dir/loc affordanceName objectName"
         return
 
 if __name__ == '__main__':
