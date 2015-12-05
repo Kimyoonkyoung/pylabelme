@@ -849,7 +849,7 @@ class MainWindow(QMainWindow, WindowMixin):
         tsplit=re.split('\-|RGB\_|\.|frame',tLabelName)
         rsplit=float(rsplit[-2])
         tsplit=float(tsplit[-2])
-        if(abs(rsplit-tsplit)>5):
+        if(abs(rsplit-tsplit)>50):
             print "possibly discontinuous sequence. Not creating label file"
             return
         
@@ -875,6 +875,8 @@ class MainWindow(QMainWindow, WindowMixin):
                     # save only those labels that are not there in the target image
                     for r in rshapes:
                         found=False
+                        print self.filename
+                        print self.objLabel, r['label']
                         for t in tshapes:
                             if r['label']==t['label'] or not (self.objLabel in r['label']):
                                 found=True
@@ -891,11 +893,18 @@ class MainWindow(QMainWindow, WindowMixin):
                     self.status("Error reading %s" % tLabelName)
                     return False
             else:
-                try:
-                    tf=LabelFile()
-                    tImgData=read(tImgName,None)
-                    tf.save(tLabelName,rshapes,unicode(tImgName),tImgData,
-                            self.lineColor.getRgb(),self.fillColor.getRgb())  
+                try:                    
+                    found = False
+                    for shape in rshapes:
+                        print self.filename,'***'
+                        print self.objLabel, shape['label'],'***'
+                        if (self.objLabel in shape['label']): # if the object label exists in reference frame
+                            found = True
+                    if found:
+                        tf=LabelFile()
+                        tImgData=read(tImgName,None)
+                        tf.save(tLabelName,rshapes,unicode(tImgName),tImgData,
+                                self.lineColor.getRgb(),self.fillColor.getRgb())  
                 except LabelFileError, e:
                     self.errorMessage(u'Error opening file',
                             (u"<p><b>%s</b></p>"
