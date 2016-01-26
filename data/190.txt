@@ -1,0 +1,1 @@
+box	placeable	293 19 69 46
