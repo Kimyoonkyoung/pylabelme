@@ -1,3 +1,7 @@
+# Run
+
+python labelme.py /full/path/to/data/folder/ placeable box
+
 
 # Labelme
 
