@@ -797,7 +797,7 @@ class MainWindow(QMainWindow, WindowMixin):
             if found and found[0]<len(self.filelist)-1:
                 lf=LabelFile(self.filelist[found[0]+1],1)
                 for anno in lf.anno:
-                    if(anno.obj_name == self.objLabel):
+                    if(True): #(anno.obj_name == self.objLabel):
                         repeat=False
                         obj_exists=True
                         break
@@ -824,7 +824,7 @@ class MainWindow(QMainWindow, WindowMixin):
             if found and found[0]>0:
                 lf=LabelFile(self.filelist[found[0]-1],1)
                 for anno in lf.anno:
-                    if(anno.obj_name == self.objLabel):
+                    if(True): #(anno.obj_name == self.objLabel):
                         repeat=False
                         obj_exists=True
                         break
@@ -875,10 +875,8 @@ class MainWindow(QMainWindow, WindowMixin):
                     # save only those labels that are not there in the target image
                     for r in rshapes:
                         found=False
-                        print self.filename
-                        print self.objLabel, r['label']
                         for t in tshapes:
-                            if r['label']==t['label'] or not (self.objLabel in r['label']):
+                            if r['label']==t['label']:# or not (self.objLabel in r['label']):
                                 found=True
                                 break
                         if(found==False):
@@ -894,12 +892,10 @@ class MainWindow(QMainWindow, WindowMixin):
                     return False
             else:
                 try:                    
-                    found = False
-                    for shape in rshapes:
-                        print self.filename,'***'
-                        print self.objLabel, shape['label'],'***'
-                        if (self.objLabel in shape['label']): # if the object label exists in reference frame
-                            found = True
+                    found = True #found = False
+                    #for shape in rshapes:
+                    #    if (self.objLabel in shape['label']): # if the object label exists in reference frame
+                    #        found = True
                     if found:
                         tf=LabelFile()
                         tImgData=read(tImgName,None)
